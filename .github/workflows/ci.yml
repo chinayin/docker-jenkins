@@ -1,0 +1,34 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches: master
+  schedule:
+    - cron: 0 0 * * *
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        image: ['2.263-slim']
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build the Docker image
+        env:
+          IMAGE: ${{ matrix.image }}
+        run: |
+          export TAG_VERSION=${IMAGE}
+          cd ${{ matrix.image }}/
+          docker build . --file Dockerfile --tag chinayin/jenkins:${TAG_VERSION}
+          docker image ls
+
+      - name: Push image to Docker hub
+        if: success()
+        env:
+          IMAGE: ${{ matrix.image }}
+        run: |
+          export TAG_VERSION=${IMAGE}
+          echo ${{ secrets.DOCKER_HUB_PASSWORD }} | docker login -u ${{ secrets.DOCKER_HUB_USER }} --password-stdin
+          docker push chinayin/jenkins:${TAG_VERSION}
+          docker logout
